@@ -20,7 +20,6 @@ DOWNLOAD_TIMEOUT = (10, 60)
 PDF_EXTRACT_TIMEOUT = 180
 TAR_EXTRACT_TIMEOUT = 180
 
-
 def _download_file(url: str, path: str) -> None:
     with requests.get(url, stream=True, timeout=DOWNLOAD_TIMEOUT) as response:
         response.raise_for_status()
@@ -28,7 +27,6 @@ def _download_file(url: str, path: str) -> None:
             for chunk in response.iter_content(chunk_size=1024 * 1024):
                 if chunk:
                     file.write(chunk)
-
 
 def _run_in_subprocess(
     result_queue: Any,
@@ -39,7 +37,6 @@ def _run_in_subprocess(
         result_queue.put(("ok", func(*args)))
     except Exception as exc:
         result_queue.put(("error", f"{type(exc).__name__}: {exc}"))
-
 
 def _run_with_hard_timeout(
     func: Callable[..., T | None],
@@ -76,13 +73,11 @@ def _run_with_hard_timeout(
     logger.warning(f"{operation} failed for {paper_title}: {payload}")
     return None
 
-
 def _extract_text_from_pdf_worker(pdf_url: str) -> str:
     with TemporaryDirectory() as temp_dir:
         path = os.path.join(temp_dir, "paper.pdf")
         _download_file(pdf_url, path)
         return extract_markdown_from_pdf(path)
-
 
 def _extract_text_from_html_worker(html_url: str) -> str | None:
     import trafilatura
@@ -95,7 +90,6 @@ def _extract_text_from_html_worker(html_url: str) -> str | None:
         raise ValueError(f"No text extracted from {html_url}")
     return text
 
-
 def _extract_text_from_tar_worker(source_url: str, paper_id: str, paper_title: str | None = None) -> str | None:
     with TemporaryDirectory() as temp_dir:
         path = os.path.join(temp_dir, "paper.tar.gz")
@@ -104,7 +98,6 @@ def _extract_text_from_tar_worker(source_url: str, paper_id: str, paper_title: s
         if not file_contents or "all" not in file_contents:
             raise ValueError("Main tex file not found.")
         return file_contents["all"]
-
 
 @register_retriever("arxiv")
 class ArxivRetriever(BaseRetriever):
@@ -117,7 +110,6 @@ class ArxivRetriever(BaseRetriever):
         client = arxiv.Client(num_retries=10, delay_seconds=10)
         query = '+'.join(self.config.source.arxiv.category)
         include_cross_list = self.config.source.arxiv.get("include_cross_list", False)
-        # Get the latest paper from arxiv rss feed
         feed = feedparser.parse(f"https://rss.arxiv.org/atom/{query}")
         if 'Feed error for query' in feed.feed.title:
             raise Exception(f"Invalid ARXIV_QUERY: {query}.")
@@ -131,7 +123,6 @@ class ArxivRetriever(BaseRetriever):
         if self.config.executor.debug:
             all_paper_ids = all_paper_ids[:10]
 
-        # Get full information of each paper from arxiv api
         bar = tqdm(total=len(all_paper_ids))
         max_batch_retries = 5
         batch_retry_delay = 30
@@ -174,8 +165,8 @@ class ArxivRetriever(BaseRetriever):
             url=raw_paper.entry_id,
             pdf_url=pdf_url,
             full_text=full_text,
+            pub_date=raw_paper.published,
         )
-
 
 def extract_text_from_html(paper: ArxivResult) -> str | None:
     html_url = paper.entry_id.replace("/abs/", "/html/")
@@ -184,7 +175,6 @@ def extract_text_from_html(paper: ArxivResult) -> str | None:
     except Exception as exc:
         logger.warning(f"HTML extraction failed for {paper.title}: {exc}")
         return None
-
 
 def extract_text_from_pdf(paper: ArxivResult) -> str | None:
     if paper.pdf_url is None:
@@ -197,7 +187,6 @@ def extract_text_from_pdf(paper: ArxivResult) -> str | None:
         operation="PDF extraction",
         paper_title=paper.title,
     )
-
 
 def extract_text_from_tar(paper: ArxivResult) -> str | None:
     source_url = paper.source_url()
