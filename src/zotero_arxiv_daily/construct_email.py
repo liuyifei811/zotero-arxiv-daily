@@ -1,15 +1,14 @@
 from .protocol import Paper
 import math
+from datetime import datetime
 
 
 def get_stars(score: float, max_stars: int = 5) -> str:
-    """将分数转为星级字符串"""
     s = round(max(1, min(max_stars, score)))
     return '★' * s + '☆' * (max_stars - s)
 
 
 def get_relevance_stars(score: float) -> str:
-    """将相关性分数转为星级"""
     if score is None:
         return '☆☆☆☆☆'
     s = min(5, max(1, round(score / 20)))
@@ -20,6 +19,12 @@ def get_relevance_pct(score: float) -> str:
     if score is None:
         return '--'
     return f"{min(99, max(50, round(score)))}%"
+
+
+def format_date(d: datetime) -> str:
+    if d is None:
+        return '未知'
+    return d.strftime('%Y年%m月%d日')
 
 
 def render_email(papers: list[Paper]) -> str:
@@ -43,6 +48,7 @@ def render_email(papers: list[Paper]) -> str:
         .header p { margin: 8px 0 0; opacity: 0.85; font-size: 14px; }
         .paper { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .paper-index { display: inline-block; background: #667eea; color: white; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-bottom: 12px; }
+        .paper-meta { font-size: 12px; color: #999; margin-bottom: 8px; }
         .paper-title-cn { font-size: 18px; font-weight: bold; color: #1a1a2e; margin-bottom: 4px; }
         .paper-title-en { font-size: 14px; color: #888; margin-bottom: 16px; font-style: italic; }
         .section { margin-bottom: 10px; }
@@ -80,6 +86,8 @@ def render_email(papers: list[Paper]) -> str:
         worth = p.worth_reading if p.worth_reading else 3
         worth_stars = get_stars(worth)
 
+        pub_date_str = format_date(p.pub_date)
+
         has_code = p.has_code or (p.code_url is not None)
         code_html = ""
         if has_code and p.code_url:
@@ -103,6 +111,7 @@ def render_email(papers: list[Paper]) -> str:
         paper_html = f"""
     <div class="paper">
         <div class="paper-index">第 {idx} 篇 · 推荐指数 {worth_stars}</div>
+        <div class="paper-meta">📅 {pub_date_str} · 👤 {authors}</div>
         <div class="paper-title-cn">{p.chinese_title or p.title}</div>
         <div class="paper-title-en">{p.title}</div>
 
@@ -133,11 +142,6 @@ def render_email(papers: list[Paper]) -> str:
         <div class="section">
             <span class="section-label">是否值得精读</span>
             <span class="section-value">{worth_stars}</span>
-        </div>
-
-        <div class="section">
-            <span class="section-label">作者</span>
-            <span class="section-value" style="font-size:12px; color:#888;">{authors}</span>
         </div>
 
         <div class="links">
