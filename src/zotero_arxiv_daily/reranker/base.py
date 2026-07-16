@@ -23,7 +23,7 @@ class BaseReranker(ABC):
 
         scores = (sim * time_decay_weight).sum(axis=1) * 10
 
-                medical_keywords = {
+        medical_keywords = {
             # === 课题核心：支架再狭窄 (ISR) ===
             "in-stent restenosis": 10,
             "stent restenosis": 8,
@@ -170,7 +170,6 @@ class BaseReranker(ABC):
                     keyword_score += v
 
             c.score = s * 0.7 + keyword_score * 0.3
-
 
         candidates = sorted(
             candidates,
