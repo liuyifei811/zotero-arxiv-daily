@@ -20,7 +20,8 @@ class Paper:
     tldr: Optional[str] = None
     affiliations: Optional[list[str]] = None
     score: Optional[float] = None
-    # === 新增字段：中文结构化分析 ===
+    pub_date: Optional[datetime] = None
+    # === 中文结构化分析 ===
     chinese_title: Optional[str] = None
     chinese_abstract: Optional[str] = None
     innovation: Optional[str] = None
@@ -31,7 +32,6 @@ class Paper:
     worth_reading: int = 3
 
     def _generate_chinese_analysis_with_llm(self, openai_client: OpenAI, llm_params: dict):
-        """用 LLM 生成结构化的中文分析"""
         lang = llm_params.get('language', 'Chinese')
 
         prompt = f"""你是一位医学影像/CV领域的资深研究者。请仔细阅读以下论文信息，生成一份结构化的中文分析。
@@ -45,10 +45,10 @@ class Paper:
 {full_preview}
 """
 
-        prompt += f"""
+        prompt += """
 请按以下 JSON 格式输出（严格输出 JSON，不要有其他文字）：
 
-{{
+{
     "chinese_title": "将论文标题翻译成中文",
     "chinese_abstract": "用中文总结论文核心内容（150-300字）",
     "innovation": "论文的创新点（列出1-3条，用中文）",
@@ -57,13 +57,14 @@ class Paper:
     "code_url": "如果有开源代码则填URL，否则填null",
     "recommendation_reason": "为什么这篇论文值得关注（1-2句话，中文）",
     "worth_reading": 1到5的整数，5表示非常值得精读
-}}
+}
 
 注意：
 - chinese_title: 专业准确的中文翻译
+- chinese_abstract: 用中文详细总结，150-300字，涵盖研究目的、方法、结果
 - innovation: 提取真正的创新点，不要泛泛而谈
-- datasets: 从论文中提取使用的数据集名称（如CCTA、MIMIC、UK Biobank等），没有则返回空列表
-- has_code: 论文是否提供了代码仓库链接（GitHub等）
+- datasets: 从论文中提取使用的数据集名称，没有则返回空列表
+- has_code: 论文是否提供了代码仓库链接
 - worth_reading: 综合论文质量、创新性、与医学影像/CV领域相关性打分
 
 请直接输出JSON，不要有任何markdown代码块标记。"""
@@ -77,7 +78,7 @@ class Paper:
             messages=[
                 {
                     "role": "system",
-                    "content": "你是一位专业的中文学术论文分析助手。你擅长提取论文核心信息、翻译学术标题、评估论文价值。你只输出JSON格式，不输出其他内容。",
+                    "content": "你是一位专业的中文学术论文分析助手。你擅长提取论文核心信息、翻译学术标题、用中文总结论文内容、评估论文价值。你只输出JSON格式，不输出其他内容。",
                 },
                 {"role": "user", "content": prompt},
             ],
@@ -98,19 +99,18 @@ class Paper:
                 logger.warning(f"Failed to parse LLM response as JSON for {self.url}")
                 return
 
-        self.chinese_title = data.get('chinese_title', '')
-        self.chinese_abstract = data.get('chinese_abstract', '')
-        self.innovation = data.get('innovation', '')
-        self.datasets = data.get('datasets', [])
+        self.chinese_title = data.get('chinese_title', '') or ''
+        self.chinese_abstract = data.get('chinese_abstract', '') or ''
+        self.innovation = data.get('innovation', '') or ''
+        self.datasets = data.get('datasets', []) or []
         self.has_code = data.get('has_code', False)
         self.code_url = data.get('code_url')
-        self.recommendation_reason = data.get('recommendation_reason', '')
+        self.recommendation_reason = data.get('recommendation_reason', '') or ''
         self.worth_reading = data.get('worth_reading', 3)
 
         self.tldr = self.chinese_abstract
 
     def generate_chinese_analysis(self, openai_client: OpenAI, llm_params: dict):
-        """生成中文结构化分析，失败时回退"""
         try:
             self._generate_chinese_analysis_with_llm(openai_client, llm_params)
         except Exception as e:
