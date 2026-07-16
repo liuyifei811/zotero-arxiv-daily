@@ -23,49 +23,133 @@ class BaseReranker(ABC):
 
         scores = (sim * time_decay_weight).sum(axis=1) * 10
 
-        medical_keywords = {
-            "vision transformer": 4,
-            "vit": 4,
-            "swin": 4,
+                medical_keywords = {
+            # === 课题核心：支架再狭窄 (ISR) ===
+            "in-stent restenosis": 10,
+            "stent restenosis": 8,
+            "ISR": 8,
+            "coronary stent": 7,
+            "stent": 5,
+            "restenosis": 7,
+            "drug-eluting stent": 6,
+            "DES": 4,
+            "PCI": 6,
+
+            # === 课题核心：冠周脂肪 (PCAT) ===
+            "pericoronary adipose tissue": 8,
+            "PCAT": 8,
+            "pericoronary fat": 8,
+            "epicardial adipose": 6,
+            "fat attenuation index": 6,
+            "FAI": 6,
+
+            # === 课题核心：冠心病 / CCTA ===
+            "coronary artery disease": 7,
+            "coronary": 5,
+            "CCTA": 7,
+            "coronary CT angiography": 7,
+            "coronary computed tomography angiography": 7,
+            "cardiac CT": 6,
+            "CT-FFR": 7,
+            "fractional flow reserve": 7,
+            "MACE": 6,
+            "major adverse cardiovascular events": 6,
+
+            # === 课题核心：Vision Transformer ===
+            "vision transformer": 7,
+            "ViT": 6,
+            "swin transformer": 6,
+            "transformer": 4,
+            "attention mechanism": 4,
+            "self-attention": 4,
+
+            # === 方法相关：影像组学 / 分割 ===
+            "radiomics": 6,
+            "image-based": 4,
+            "dual source CT": 5,
+            "dual-source CT": 5,
+            "metal artifact": 5,
+            "metal artifact reduction": 5,
+            "coronary plaque": 5,
+            "plaque analysis": 5,
+            "plaque": 3,
+            "vessel segmentation": 5,
+            "coronary segmentation": 6,
+            "coronary artery segmentation": 6,
+
+            # === 方法相关：多模态 / 可解释性 ===
+            "multi-modal": 5,
+            "multimodal": 5,
+            "feature fusion": 5,
+            "grad-cam": 4,
+            "SHAP": 3,
+            "explainability": 4,
+            "interpretable": 4,
+
+            # === 中等权重：CV+医学交叉 ===
+            "deep learning": 3,
+            "CNN": 2,
+            "neural network": 2,
+            "cardiovascular": 4,
+            "cardiac": 4,
+            "myocardial": 3,
+            "atherosclerosis": 4,
+            "intravascular": 4,
+            "angiography": 3,
+            "CTA": 3,
+            "computed tomography": 2,
             "medical image": 3,
             "medical imaging": 3,
-            "radiomics": 5,
-            "coronary": 5,
-            "coronary artery": 5,
-            "coronary ct": 5,
-            "cardiac ct": 5,
-            "ccta": 5,
-            "pcat": 8,
-            "pericoronary adipose tissue": 8,
-            "epicardial adipose tissue": 6,
-            "fat attenuation index": 6,
-            "plaque": 4,
-            "stent": 6,
-            "restenosis": 8,
-            "in-stent restenosis": 10,
-            "pci": 6,
-            "ischemia": 4,
-            "cardiovascular": 4,
-            "heart": 3,
-            "segmentation": 2,
+            "image segmentation": 3,
+            "semantic segmentation": 2,
             "classification": 2,
-            "foundation model": 2,
         }
 
         bad_keywords = {
+            # === 不相关器官/部位 ===
+            "brain tumor": -5,
+            "brain MRI": -4,
+            "brain CT": -4,
+            "lung nodule": -5,
+            "lung cancer": -4,
+            "pulmonary": -4,
+            "liver tumor": -5,
+            "liver segmentation": -4,
+            "kidney": -4,
+            "prostate": -4,
+            "retinal": -4,
+            "retina": -4,
+            "skin lesion": -4,
+            "breast cancer": -4,
+            "mammogram": -4,
+            "fetal": -4,
+
+            # === 不相关领域 ===
+            "autonomous driving": -8,
+            "object detection": -2,
+            "pedestrian": -4,
+            "traffic": -4,
             "large language model": -6,
-            "llm": -6,
+            "LLM": -6,
             "agent": -5,
             "chatgpt": -6,
-            "robot": -4,
-            "robotics": -4,
-            "autonomous driving": -8,
+            "NLP": -4,
+            "language model": -4,
+            "chatbot": -4,
+            "speech recognition": -4,
+            "recommendation system": -4,
+            "robot": -3,
+            "robotics": -3,
+            "reinforcement learning": -3,
+            "game": -3,
+
+            # === 不相关 CV 方向 ===
+            "GAN": -3,
             "diffusion": -5,
             "stable diffusion": -5,
             "image generation": -5,
+            "text-to-image": -4,
             "speech": -4,
-            "nlp": -4,
-            "recommendation system": -4,
         }
 
         for s, c in zip(scores, candidates):
@@ -86,6 +170,7 @@ class BaseReranker(ABC):
                     keyword_score += v
 
             c.score = s * 0.7 + keyword_score * 0.3
+
 
         candidates = sorted(
             candidates,
