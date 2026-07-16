@@ -13,10 +13,81 @@ class BaseReranker(ABC):
         time_decay_weight: np.ndarray = time_decay_weight / time_decay_weight.sum()
         sim = self.get_similarity_score([c.abstract for c in candidates], [c.abstract for c in corpus])
         assert sim.shape == (len(candidates), len(corpus))
-        scores = (sim * time_decay_weight).sum(axis=1) * 10 # [n_candidate]
-        for s,c in zip(scores,candidates):
-            c.score = s
-        candidates = sorted(candidates,key=lambda x: x.score,reverse=True)
+        scores = (sim * time_decay_weight).sum(axis=1) * 10
+
+medical_keywords = {
+    "vision transformer":4,
+    "vit":4,
+    "swin":4,
+    "medical image":3,
+    "medical imaging":3,
+    "radiomics":5,
+    "coronary":5,
+    "coronary artery":5,
+    "coronary ct":5,
+    "cardiac ct":5,
+    "ccta":5,
+    "pcat":8,
+    "pericoronary adipose tissue":8,
+    "epicardial adipose tissue":6,
+    "fat attenuation index":6,
+    "plaque":4,
+    "stent":6,
+    "restenosis":8,
+    "in-stent restenosis":10,
+    "pci":6,
+    "ischemia":4,
+    "cardiovascular":4,
+    "heart":3,
+    "segmentation":2,
+    "classification":2,
+    "foundation model":2
+}
+
+bad_keywords = {
+    "large language model":-6,
+    "llm":-6,
+    "agent":-5,
+    "chatgpt":-6,
+    "robot":-4,
+    "robotics":-4,
+    "autonomous driving":-8,
+    "diffusion":-5,
+    "stable diffusion":-5,
+    "image generation":-5,
+    "speech":-4,
+    "nlp":-4,
+    "recommendation system":-4
+}
+
+for s,c in zip(scores,candidates):
+
+    text = (
+        (c.title or "")
+        + " "
+        + (c.abstract or "")
+    ).lower()
+
+    keyword_score = 0
+
+    for k,v in medical_keywords.items():
+        if k in text:
+            keyword_score += v
+
+    for k,v in bad_keywords.items():
+        if k in text:
+            keyword_score += v
+
+    c.score = float(
+        s*0.7 +
+        keyword_score*0.3
+    )
+
+candidates = sorted(
+    candidates,
+    key=lambda x:x.score,
+    reverse=True
+)
         return candidates
     
     @abstractmethod
